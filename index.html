@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="user-scalable=no, width=device-width, initial-scale=1.0" />
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            max-width: 100vw;
+            max-height: 100vh;
+            background: #16171c;
+            font-family: 'Roboto', sans-serif;
+            overflow: hidden;
+            --color-buy: #3FC881;
+            --color-sell: #C83F66;
+        }
+        .wrapper {
+            display: inline-block;
+            max-width: 100%;
+            margin: 20px auto;
+            text-align: center;
+        }
+
+        .field-wrapper {
+            display: inline-flex;
+            width: 100%;
+            background: url(grid.png);
+            background-size: contain;
+            overflow: hidden;
+        }
+        .field {
+            position: relative;
+            width: 10000px;
+            height: 350px;
+            color: #3fc881;
+            transition: transform 1s ease;
+        }
+        .line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 10000px;
+            height: 100%;
+        }
+        .axis {
+            color: #fff;
+            font-size: 12px;
+        }
+        .x-axis {
+            display: flex;
+            max-width: calc(100% - 100px);
+        }
+        .x-axis > div {
+            margin-right: 8px;
+        }
+        .y-axis {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+        }
+        .prize {
+            margin-bottom: 10px;
+            font-size: 50px;
+            line-height: 1;
+            color: #fff;
+            text-align: right;
+        }
+        .buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+
+        .button-wrapper {
+            position: relative;
+            width: calc(50% - 4px);
+            height: 60px;
+        }
+        .cursor {
+            position: absolute;
+            top: 20px;
+            right: 10px;
+            z-index: 2;
+            width: 60px;
+            display: none;
+            transform: rotate(-20deg);
+        }
+        .btn {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            color: #fff;
+            font-size: 24px;
+            line-height: 1;
+            border-radius: 6px;
+            cursor: pointer;
+            border: none;
+            outline: none;
+        }
+        .btn-buy {
+            background: var(--color-buy);
+        }
+        .btn-sell {
+            background: var(--color-sell);
+        }
+        .cursor.flick {
+            display: block;
+            animation: flick 0.5s infinite ease-out;
+        }
+        .btn.clicked {
+            animation: pulse 0.5s 1 ease-out;
+        }
+
+        @media (min-width: 400px) {
+            .wrapper {
+                max-width: 400px;
+            }
+            .axis {
+                font-size: 16px;
+            }
+            .field {
+                height: 500px;
+            }
+            .button-wrapper {
+                height: 100px;
+            }
+            .cursor {
+                width: 100px;
+            }
+        }
+
+        @keyframes flick {
+            0% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.2;
+            }
+
+            100% {
+                opacity: 1;
+            }
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1)
+            }
+
+            50% {
+                transform: scale(0.8)
+            }
+
+            100% {
+                transform: scale(1)
+            }
+        }
+    </style>
+  </head>
+  <body>
+    <div class="wrapper">
+      <div class="prize">$ <span id="prizeNum">0</span></div>
+      <div class="field-wrapper">
+        <div class="field"></div>
+        <div class="axis y-axis">
+          <div>150,00</div>
+          <div>140,00</div>
+          <div>130,00</div>
+          <div>120,00</div>
+          <div>110,00</div>
+          <div>100,00</div>
+          <div>90,00</div>
+        </div>
+      </div>
+      <div class="axis x-axis">
+        <div>· 11 am</div>
+        <div>· 12 am</div>
+        <div>· 1 pm</div>
+        <div>· 2 pm</div>
+        <div>· 3 pm</div>
+      </div>
+      <div class="buttons">
+        <div class="button-wrapper buy">
+          <button class="btn btn-buy">Buy</button>
+          <img class="cursor cursor-buy flick" src="cursor.png" />
+        </div>
+        <div class="button-wrapper sell">
+          <button class="btn btn-sell">Sell</button>
+          <img class="cursor cursor-sell" src="cursor.png" />
+        </div>
+      </div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vivus/0.4.6/vivus.min.js" integrity="sha512-oUUeA7VTcWBqUJD/VYCBB4VeIE0g1pg5aRMiSUOMGnNNeCLRS39OlkcyyeJ0hYx2h3zxmIWhyKiUXKkfZ5Wryg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script>
+      const wrapper = document.querySelector('.field-wrapper');
+      const field = document.querySelector('.field');
+      const buyBtn = document.querySelector('.buy');
+      const sellBtn = document.querySelector('.sell');
+      const buyCursor = document.querySelector('.cursor-buy');
+      const sellCursor = document.querySelector('.cursor-sell');
+      const prizeNum = document.getElementById('prizeNum');
+      let isDrawing = false;
+      let shouldBuy = true;
+      let shouldSell = false;
+      let interval;
+      let prevX = 10;
+      let fieldOffset = 0;
+      let num = 1;
+      let duration = 20;
+
+      function createLine(type) {
+        console.log(wrapper.clientWidth);
+        if (prevX > wrapper.clientWidth / 2.5 ) {
+          field.style.transform = `translateX(-${fieldOffset}px)`;
+          fieldOffset += 30;
+        }
+
+        isDrawing = true;
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.classList.add('line');
+        svg.id = `svg-${num}`;
+        const thinLine = document.createElementNS(
+          'http://www.w3.org/2000/svg',
+          'line'
+        );
+        const thickLine = document.createElementNS(
+          'http://www.w3.org/2000/svg',
+          'line'
+        );
+        thinLine.setAttribute('x1', prevX);
+        thinLine.setAttribute('x2', prevX);
+        thinLine.setAttribute('stroke-width', '0.5');
+        thinLine.setAttribute('stroke', '#ccc');
+        thinLine.setAttribute('stroke-linecap', 'round');
+        thickLine.setAttribute('x1', prevX);
+        thickLine.setAttribute('x2', prevX);
+        thickLine.setAttribute('stroke-width', '4');
+        thickLine.setAttribute('stroke', `var(--color-${type})`);
+        thickLine.setAttribute('stroke-linecap', 'round');
+        prevX += 30;
+        const randomY1 = Math.random() * (field.clientHeight - 10 - (field.clientHeight - 100)) + field.clientHeight - 100;
+        const randomY2 = Math.random() * (field.clientHeight / 2 - 50) + 50;
+        const y1 = type === 'buy' ? randomY1 : randomY2;
+        const y2 = type === 'buy' ? randomY2 : randomY1;
+        const y3 = type === 'buy' ? Math.random() * ((y1 - 30) - (y1 - 70)) + y1 - 70 : Math.random() * ((y1 + 30) - (y1 + 70)) + y1 + 70;
+        const y4 = type === 'buy' ? Math.random() * ((y2 + 50) - (y2 + 90)) + y2 + 90 : Math.random() * ((y2 - 50) - (y2 - 90)) + y2 - 90;
+        thinLine.setAttribute('y1', String(y1));
+        thinLine.setAttribute('y2', String(y2));
+        thickLine.setAttribute('y1', String(y3));
+        thickLine.setAttribute('y2', String(y4));
+        svg.appendChild(thinLine);
+        svg.appendChild(thickLine);
+        field.appendChild(svg);
+        new Vivus(`svg-${num}`, { duration }, () => {
+          const cursor = type === 'buy' ? sellCursor : buyCursor;
+          cursor.classList.add('flick');
+          clearInterval(interval);
+          isDrawing = false;
+        });
+        num++;
+      }
+
+      buyBtn.addEventListener('click', () => {
+        if (isDrawing || shouldSell) return;
+        buyBtn.classList.add('clicked');
+        buyCursor.classList.remove('flick');
+        createLine('buy');
+        shouldSell = true;
+        shouldBuy = false;
+      })
+
+      buyBtn.addEventListener('animationend', () => {
+        buyBtn.classList.remove('clicked');
+      })
+
+      sellBtn.addEventListener('click', () => {
+        if (isDrawing || shouldBuy) return;
+        sellBtn.classList.add('clicked');
+        sellCursor.classList.remove('flick');
+        createLine('sell');
+        let num = Number(prizeNum.textContent);
+        interval = setInterval(() => {
+          num += 1;
+          prizeNum.textContent = String(num);
+        }, 10);
+        shouldSell = false;
+        shouldBuy = true;
+      })
+
+      sellBtn.addEventListener('animationend', () => {
+        sellBtn.classList.remove('clicked');
+      })
+    </script>
+  </body>
+</html>
